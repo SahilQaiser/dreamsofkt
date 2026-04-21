@@ -1,0 +1,20 @@
+name = "dreams-of-kt"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+main = ".open-next/worker.js"
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# KV namespace for video content + admin sessions
+# Run: wrangler kv namespace create KT_CONTENT
+# Run: wrangler kv namespace create KT_CONTENT --preview
+[[kv_namespaces]]
+binding = "KT_CONTENT"
+id = "3b590a55ed1e47daa1ff90aa5ed2fb8a"
+preview_id = "4b89d454841f4e01b53649cda57fee64"
+
+# Admin password is stored as a Wrangler secret (never in this file):
+# Run: wrangler secret put ADMIN_PASSWORD
+# For local dev, add to .dev.vars: ADMIN_PASSWORD=yourpassword
