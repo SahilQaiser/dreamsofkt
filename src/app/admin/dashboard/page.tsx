@@ -10,7 +10,7 @@ const BLANK_VIDEO: Omit<VideoItem, 'id' | 'order'> = {
   location: '',
   duration: '',
   tags: [],
-  type: 'gradient',
+  type: 'youtube',
   src: '',
   thumbnail: '',
   wide: false,
