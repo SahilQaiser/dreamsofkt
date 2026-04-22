@@ -6,6 +6,7 @@ import VideoGrid from '@/components/VideoGrid'
 import Stats from '@/components/Stats'
 import About from '@/components/About'
 import Services from '@/components/Services'
+import FlavorSwitcher from '@/components/FlavorSwitcher'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
 import { VARIANT_CONFIG } from '@/lib/variantConfig'
@@ -17,13 +18,14 @@ export default function DreamsLayout({ content }: { content: SiteContent }) {
   return (
     <>
       <Navbar wordmark={cfg.wordmark} />
-      <VideoHero hero={content.hero} />
+      <VideoHero hero={content.hero} title={cfg.heroTitle} label={cfg.heroLabel} />
       <ReelStrip videos={content.videos} />
       <FeaturedReel reel={content.featuredReel} />
       <VideoGrid videos={content.videos} />
       <Stats />
       <About />
       <Services />
+      <FlavorSwitcher />
       <Contact />
       <Footer wordmark={cfg.wordmark} />
     </>

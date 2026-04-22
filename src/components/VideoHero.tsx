@@ -10,7 +10,15 @@ const LOCATIONS = [
 ]
 const TICKS = Array(6).fill(LOCATIONS).flat()
 
-export default function VideoHero({ hero }: { hero?: HeroSettings }) {
+export default function VideoHero({
+  hero,
+  title = 'Dreams',
+  label = 'Aerial Cinematography & Drone Videography',
+}: {
+  hero?: HeroSettings
+  title?: string
+  label?: string
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [muted, setMuted] = useState(true)
 
@@ -131,7 +139,7 @@ export default function VideoHero({ hero }: { hero?: HeroSettings }) {
             marginBottom: '32px',
           }}
         >
-          Aerial Cinematography & Drone Videography
+          {label}
         </p>
 
         {/* Display title */}
@@ -145,7 +153,7 @@ export default function VideoHero({ hero }: { hero?: HeroSettings }) {
               textShadow: '0 4px 40px rgba(0,0,0,0.5)',
             }}
           >
-            Dreams
+            {title}
           </span>
           <span
             style={{

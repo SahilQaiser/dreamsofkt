@@ -1,4 +1,10 @@
-export default function TextHero({ label = 'Aerial Cinematography' }: { label?: string }) {
+export default function TextHero({
+  title = 'Thoughts',
+  label = 'Aerial Essays & Stories',
+}: {
+  title?: string
+  label?: string
+}) {
   return (
     <section
       style={{
@@ -23,9 +29,8 @@ export default function TextHero({ label = 'Aerial Cinematography' }: { label?: 
             marginBottom: '32px',
           }}
         >
-          The world,{' '}
-          <span style={{ color: 'var(--color-sky)' }}>written</span>
-          {' '}from above
+          {title},{' '}
+          <span style={{ color: 'var(--color-sky)' }}>from above</span>
         </h1>
         <p
           style={{
