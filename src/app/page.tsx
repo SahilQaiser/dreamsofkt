@@ -1,36 +1,19 @@
-import Navbar from '@/components/Navbar'
-import VideoHero from '@/components/VideoHero'
-import ReelStrip from '@/components/ReelStrip'
-import FeaturedReel from '@/components/FeaturedReel'
-import VideoGrid from '@/components/VideoGrid'
-import About from '@/components/About'
-import Stats from '@/components/Stats'
-import Services from '@/components/Services'
-import Contact from '@/components/Contact'
-import Footer from '@/components/Footer'
 import { getContent } from '@/lib/kv'
+import { getVariant } from '@/lib/variant'
 import { DEFAULT_CONTENT } from '@/types/content'
+import DreamsLayout from '@/components/layouts/DreamsLayout'
+import ThoughtsLayout from '@/components/layouts/ThoughtsLayout'
+import MemoriesLayout from '@/components/layouts/MemoriesLayout'
+import LegacyLayout from '@/components/layouts/LegacyLayout'
 
 export default async function Home() {
-  let content = DEFAULT_CONTENT
-  try {
-    content = await getContent()
-  } catch {
-    // Fallback to default when running outside Cloudflare Workers (e.g. next dev)
-  }
+  const [variant, content] = await Promise.all([
+    getVariant(),
+    getContent().catch(() => DEFAULT_CONTENT),
+  ])
 
-  return (
-    <>
-      <Navbar />
-      <VideoHero hero={content.hero} />
-      <ReelStrip videos={content.videos} />
-      <FeaturedReel reel={content.featuredReel} />
-      <VideoGrid videos={content.videos} />
-      <Stats />
-      <About />
-      <Services />
-      <Contact />
-      <Footer />
-    </>
-  )
+  if (variant === 'thoughts') return <ThoughtsLayout content={content} />
+  if (variant === 'memories') return <MemoriesLayout content={content} />
+  if (variant === 'legacy') return <LegacyLayout content={content} />
+  return <DreamsLayout content={content} />
 }

@@ -462,4 +462,50 @@ h3 {
   padding: 14px 0;
   border-bottom: 1px solid var(--color-rim);
 }
+
+/* ─────────────────────────────────────────────
+   Variant token overrides
+   All scoped to [data-variant] on <html>
+   Components consume var(--color-*) / var(--font-*)
+   so these cascade through automatically.
+───────────────────────────────────────────── */
+
+/* thoughts — editorial, violet, Playfair Display */
+[data-variant="thoughts"] {
+  --color-void:      #0d0d12;
+  --color-deep:      #12121a;
+  --color-surface:   #181824;
+  --color-surface-2: #1e1e2e;
+  --color-sky:       #a78bfa;
+  --color-sky-dim:   #6d4fc4;
+  --color-amber:     #c084fc;
+  --color-amber-dim: #7e3faa;
+  --font-display:    'Playfair Display', 'Georgia', serif;
+}
+
+/* memories — warm, amber-gold, Lora */
+[data-variant="memories"] {
+  --color-void:      #0c0805;
+  --color-deep:      #130f0a;
+  --color-surface:   #1c1510;
+  --color-surface-2: #231a13;
+  --color-sky:       #f59e0b;
+  --color-sky-dim:   #92600a;
+  --color-amber:     #fbbf24;
+  --color-amber-dim: #a16207;
+  --font-display:    'Lora', 'Georgia', serif;
+}
+
+/* legacy — near-monochrome, silver, minimal */
+[data-variant="legacy"] {
+  --color-void:      #080a0f;
+  --color-deep:      #0e1018;
+  --color-surface:   #141720;
+  --color-surface-2: #1a1d28;
+  --color-sky:       #cbd5e1;
+  --color-sky-dim:   #64748b;
+  --color-amber:     #94a3b8;
+  --color-amber-dim: #475569;
+  --font-display:    'Cormorant Garamond', 'Times New Roman', serif;
+}
 .admin-video-row:last-child { border-bottom: none; }
