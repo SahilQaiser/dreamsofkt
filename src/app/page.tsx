@@ -23,7 +23,7 @@ export default async function Home() {
     <>
       <Navbar />
       <VideoHero hero={content.hero} />
-      <ReelStrip />
+      <ReelStrip videos={content.videos} />
       <FeaturedReel reel={content.featuredReel} />
       <VideoGrid videos={content.videos} />
       <Stats />
