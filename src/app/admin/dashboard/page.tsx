@@ -16,6 +16,13 @@ const BLANK_VIDEO: Omit<VideoItem, 'id' | 'order'> = {
   wide: false,
 }
 
+async function apiFetch(url: string, options?: RequestInit) {
+  const res = await fetch(url, options)
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`)
+  return data
+}
+
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="admin-label">{children}</label>
 }
@@ -29,12 +36,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function SaveBtn({ saving, onClick }: { saving: boolean; onClick: () => void }) {
-  return (
-    <button className="admin-btn" onClick={onClick} disabled={saving}>
-      {saving ? 'Saving…' : 'Save'}
-    </button>
-  )
+function ErrMsg({ msg }: { msg: string }) {
+  return <p style={{ fontSize: '12px', color: '#f87171', marginTop: '8px' }}>{msg}</p>
 }
 
 export default function Dashboard() {
@@ -42,20 +45,29 @@ export default function Dashboard() {
   const [hero, setHero] = useState<HeroSettings>({ type: 'none', src: '' })
   const [reel, setReel] = useState<ReelSettings>({ type: 'none', src: '', duration: '', title: '', subtitle: '' })
   const [videos, setVideos] = useState<VideoItem[]>([])
+  const [loadErr, setLoadErr] = useState('')
+  const [settingsErr, setSettingsErr] = useState('')
   const [savingSettings, setSavingSettings] = useState(false)
   const [addingVideo, setAddingVideo] = useState(false)
+  const [addErr, setAddErr] = useState('')
   const [newVideo, setNewVideo] = useState({ ...BLANK_VIDEO })
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<Partial<VideoItem>>({})
+  const [editErr, setEditErr] = useState('')
 
   const load = useCallback(async () => {
-    const [s, v] = await Promise.all([
-      fetch('/api/admin/settings').then((r) => r.json()),
-      fetch('/api/admin/videos').then((r) => r.json()),
-    ])
-    if (s.hero) setHero(s.hero)
-    if (s.featuredReel) setReel(s.featuredReel)
-    if (v.videos) setVideos(v.videos)
+    setLoadErr('')
+    try {
+      const [s, v] = await Promise.all([
+        apiFetch('/api/admin/settings'),
+        apiFetch('/api/admin/videos'),
+      ])
+      if (s.hero) setHero(s.hero)
+      if (s.featuredReel) setReel(s.featuredReel)
+      if (v.videos) setVideos(v.videos)
+    } catch (e) {
+      setLoadErr(e instanceof Error ? e.message : 'Failed to load data.')
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -67,51 +79,60 @@ export default function Dashboard() {
 
   const saveSettings = async () => {
     setSavingSettings(true)
-    await fetch('/api/admin/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hero, featuredReel: reel }),
-    })
-    setSavingSettings(false)
+    setSettingsErr('')
+    try {
+      await apiFetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hero, featuredReel: reel }),
+      })
+    } catch (e) {
+      setSettingsErr(e instanceof Error ? e.message : 'Save failed.')
+    } finally {
+      setSavingSettings(false)
+    }
   }
 
   const addVideo = async () => {
-    const res = await fetch('/api/admin/videos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...newVideo,
-        tags: typeof newVideo.tags === 'string'
-          ? (newVideo.tags as string).split(',').map((t) => t.trim()).filter(Boolean)
-          : newVideo.tags,
-      }),
-    })
-    const data = await res.json()
-    setVideos((v) => [...v, data.video])
-    setNewVideo({ ...BLANK_VIDEO })
-    setAddingVideo(false)
+    setAddErr('')
+    try {
+      const data = await apiFetch('/api/admin/videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newVideo),
+      })
+      setVideos((v) => [...v, data.video])
+      setNewVideo({ ...BLANK_VIDEO })
+      setAddingVideo(false)
+    } catch (e) {
+      setAddErr(e instanceof Error ? e.message : 'Could not add video.')
+    }
   }
 
   const saveEdit = async (id: string) => {
-    const draft = { ...editDraft }
-    if (typeof draft.tags === 'string') {
-      draft.tags = (draft.tags as string).split(',').map((t) => t.trim()).filter(Boolean)
+    setEditErr('')
+    try {
+      const data = await apiFetch(`/api/admin/videos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editDraft),
+      })
+      setVideos((v) => v.map((x) => (x.id === id ? data.video : x)))
+      setEditingId(null)
+      setEditDraft({})
+    } catch (e) {
+      setEditErr(e instanceof Error ? e.message : 'Save failed.')
     }
-    const res = await fetch(`/api/admin/videos/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(draft),
-    })
-    const data = await res.json()
-    setVideos((v) => v.map((x) => (x.id === id ? data.video : x)))
-    setEditingId(null)
-    setEditDraft({})
   }
 
   const deleteVideo = async (id: string) => {
     if (!confirm('Delete this video?')) return
-    await fetch(`/api/admin/videos/${id}`, { method: 'DELETE' })
-    setVideos((v) => v.filter((x) => x.id !== id).map((x, i) => ({ ...x, order: i })))
+    try {
+      await apiFetch(`/api/admin/videos/${id}`, { method: 'DELETE' })
+      setVideos((v) => v.filter((x) => x.id !== id).map((x, i) => ({ ...x, order: i })))
+    } catch {
+      alert('Delete failed — please try again.')
+    }
   }
 
   const moveVideo = async (id: string, dir: -1 | 1) => {
@@ -119,23 +140,24 @@ export default function Dashboard() {
     const idx = sorted.findIndex((v) => v.id === id)
     const targetIdx = idx + dir
     if (targetIdx < 0 || targetIdx >= sorted.length) return
-
     const currentOrder = sorted[idx].order
     const targetOrder = sorted[targetIdx].order
-
-    await fetch(`/api/admin/videos/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order: targetOrder }),
-    })
-
-    setVideos((v) =>
-      v.map((x) => {
-        if (x.id === id) return { ...x, order: targetOrder }
-        if (x.order === targetOrder) return { ...x, order: currentOrder }
-        return x
+    try {
+      await apiFetch(`/api/admin/videos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: targetOrder }),
       })
-    )
+      setVideos((v) =>
+        v.map((x) => {
+          if (x.id === id) return { ...x, order: targetOrder }
+          if (x.order === targetOrder) return { ...x, order: currentOrder }
+          return x
+        })
+      )
+    } catch {
+      // reorder failure is non-critical — state unchanged
+    }
   }
 
   const sortedVideos = [...videos].sort((a, b) => a.order - b.order)
@@ -158,43 +180,50 @@ export default function Dashboard() {
         <button className="admin-btn-ghost" onClick={logout}>Sign out</button>
       </header>
 
-      {/* Content */}
-      <main style={{ padding: '32px 0', maxWidth: '860px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <main style={{ padding: '32px 0 64px', maxWidth: '860px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+        {loadErr && (
+          <div style={{ margin: '0 40px', padding: '14px 18px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '10px' }}>
+            <p style={{ fontSize: '13px', color: '#f87171' }}>{loadErr}</p>
+          </div>
+        )}
 
         {/* ── Hero Video ── */}
         <div className="admin-card">
           <p className="admin-section-title">Hero video</p>
           <p style={{ fontSize: '12px', color: 'var(--color-mist)', marginBottom: '20px' }}>
-            The full-screen background loop on the homepage.
+            Full-screen background loop on the homepage.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
             <Field label="Type">
               <select className="form-input" value={hero.type} onChange={(e) => setHero({ ...hero, type: e.target.value as HeroSettings['type'] })} style={{ appearance: 'none' }}>
-                {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t === 'none' ? 'None (gradient)' : t === 'youtube' ? 'YouTube' : 'R2 / Direct URL'}</option>)}
+                {TYPE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t === 'none' ? 'None (gradient)' : t === 'youtube' ? 'YouTube' : 'R2 / Direct URL'}</option>
+                ))}
               </select>
             </Field>
             <Field label={hero.type === 'youtube' ? 'YouTube video ID' : 'Video URL'}>
               <input className="form-input" placeholder={hero.type === 'youtube' ? 'dQw4w9WgXcQ' : 'https://…'} value={hero.src} onChange={(e) => setHero({ ...hero, src: e.target.value })} disabled={hero.type === 'none'} />
             </Field>
           </div>
-          {hero.type === 'youtube' && (
-            <p style={{ fontSize: '11px', color: 'var(--color-mist)', marginBottom: '16px' }}>
-              YouTube embeds show the video with a subtle player overlay. For a clean seamless loop, R2 is recommended.
-            </p>
-          )}
-          <SaveBtn saving={savingSettings} onClick={saveSettings} />
+          {settingsErr && <ErrMsg msg={settingsErr} />}
+          <button className="admin-btn" onClick={saveSettings} disabled={savingSettings}>
+            {savingSettings ? 'Saving…' : 'Save'}
+          </button>
         </div>
 
         {/* ── Featured Reel ── */}
         <div className="admin-card">
           <p className="admin-section-title">Featured reel</p>
           <p style={{ fontSize: '12px', color: 'var(--color-mist)', marginBottom: '20px' }}>
-            The large clickable reel card below the hero.
+            Large clickable reel card below the hero.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <Field label="Type">
               <select className="form-input" value={reel.type} onChange={(e) => setReel({ ...reel, type: e.target.value as ReelSettings['type'] })} style={{ appearance: 'none' }}>
-                {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t === 'none' ? 'None' : t === 'youtube' ? 'YouTube' : 'R2 / Direct URL'}</option>)}
+                {TYPE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t === 'none' ? 'None' : t === 'youtube' ? 'YouTube' : 'R2 / Direct URL'}</option>
+                ))}
               </select>
             </Field>
             <Field label={reel.type === 'youtube' ? 'YouTube video ID' : 'Video URL'}>
@@ -212,14 +241,17 @@ export default function Dashboard() {
               <input className="form-input" placeholder="40+ Locations · 7 Continents · 2024" value={reel.subtitle} onChange={(e) => setReel({ ...reel, subtitle: e.target.value })} />
             </Field>
           </div>
-          <SaveBtn saving={savingSettings} onClick={saveSettings} />
+          {settingsErr && <ErrMsg msg={settingsErr} />}
+          <button className="admin-btn" onClick={saveSettings} disabled={savingSettings}>
+            {savingSettings ? 'Saving…' : 'Save'}
+          </button>
         </div>
 
         {/* ── Portfolio Videos ── */}
         <div className="admin-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <p className="admin-section-title" style={{ marginBottom: 0 }}>Portfolio videos</p>
-            <button className="admin-btn" onClick={() => setAddingVideo(true)} disabled={addingVideo}>
+            <button className="admin-btn" onClick={() => { setAddingVideo(true); setAddErr('') }} disabled={addingVideo}>
               + Add video
             </button>
           </div>
@@ -232,16 +264,19 @@ export default function Dashboard() {
                 data={newVideo}
                 onChange={(f, v) => setNewVideo((p) => ({ ...p, [f]: v }))}
               />
+              {addErr && <ErrMsg msg={addErr} />}
               <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                 <button className="admin-btn" onClick={addVideo}>Add</button>
-                <button className="admin-btn-ghost" onClick={() => { setAddingVideo(false); setNewVideo({ ...BLANK_VIDEO }) }}>Cancel</button>
+                <button className="admin-btn-ghost" onClick={() => { setAddingVideo(false); setNewVideo({ ...BLANK_VIDEO }); setAddErr('') }}>Cancel</button>
               </div>
             </div>
           )}
 
           {/* Video list */}
           {sortedVideos.length === 0 && !addingVideo && (
-            <p style={{ fontSize: '13px', color: 'var(--color-mist)', textAlign: 'center', padding: '32px 0' }}>No videos yet. Add one above.</p>
+            <p style={{ fontSize: '13px', color: 'var(--color-mist)', textAlign: 'center', padding: '32px 0' }}>
+              No videos yet. Add one above.
+            </p>
           )}
 
           {sortedVideos.map((v, i) => (
@@ -253,27 +288,26 @@ export default function Dashboard() {
                   height: '36px',
                   borderRadius: '6px',
                   flexShrink: 0,
-                  background: v.type === 'gradient' ? v.src : undefined,
+                  background: v.type === 'gradient' ? v.src : 'var(--color-surface-2)',
                   backgroundImage: v.type === 'youtube'
                     ? `url(https://img.youtube.com/vi/${v.src}/default.jpg)`
-                    : v.thumbnail
-                    ? `url(${v.thumbnail})`
-                    : undefined,
+                    : v.thumbnail ? `url(${v.thumbnail})` : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   border: '1px solid var(--color-rim)',
-                  backgroundColor: v.type !== 'gradient' ? 'var(--color-surface)' : undefined,
                 }}
               />
+
               {editingId === v.id ? (
                 <div style={{ flex: 1 }}>
                   <VideoForm
-                    data={{ ...v, ...editDraft, tags: editDraft.tags ?? v.tags }}
+                    data={{ ...v, ...editDraft }}
                     onChange={(f, val) => setEditDraft((p) => ({ ...p, [f]: val }))}
                   />
+                  {editErr && <ErrMsg msg={editErr} />}
                   <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                     <button className="admin-btn" onClick={() => saveEdit(v.id)}>Save</button>
-                    <button className="admin-btn-ghost" onClick={() => { setEditingId(null); setEditDraft({}) }}>Cancel</button>
+                    <button className="admin-btn-ghost" onClick={() => { setEditingId(null); setEditDraft({}); setEditErr('') }}>Cancel</button>
                   </div>
                 </div>
               ) : (
@@ -285,10 +319,10 @@ export default function Dashboard() {
                       {v.wide && <span style={{ marginLeft: '6px', color: 'var(--color-sky)' }}>wide</span>}
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <button className="admin-btn-ghost" style={{ padding: '4px 8px' }} onClick={() => moveVideo(v.id, -1)} disabled={i === 0} title="Move up">↑</button>
-                    <button className="admin-btn-ghost" style={{ padding: '4px 8px' }} onClick={() => moveVideo(v.id, 1)} disabled={i === sortedVideos.length - 1} title="Move down">↓</button>
-                    <button className="admin-btn-ghost" onClick={() => { setEditingId(v.id); setEditDraft({}) }}>Edit</button>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                    <button className="admin-btn-ghost" style={{ padding: '4px 8px' }} onClick={() => moveVideo(v.id, -1)} disabled={i === 0}>↑</button>
+                    <button className="admin-btn-ghost" style={{ padding: '4px 8px' }} onClick={() => moveVideo(v.id, 1)} disabled={i === sortedVideos.length - 1}>↓</button>
+                    <button className="admin-btn-ghost" onClick={() => { setEditingId(v.id); setEditDraft({}); setEditErr('') }}>Edit</button>
                     <button className="admin-btn-danger" onClick={() => deleteVideo(v.id)}>Delete</button>
                   </div>
                 </>
@@ -308,6 +342,8 @@ function VideoForm({
   data: Partial<VideoItem> & { type: VideoItem['type']; src: string }
   onChange: (field: string, value: unknown) => void
 }) {
+  const tagsString = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags ?? '')
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
       <Field label="Title">
@@ -337,17 +373,17 @@ function VideoForm({
       <Field label="Tags (comma-separated)">
         <input
           className="form-input"
-          value={Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags ?? '')}
-          onChange={(e) => onChange('tags', e.target.value)}
+          value={tagsString}
+          onChange={(e) => onChange('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
           placeholder="Landscape, 4K"
         />
       </Field>
       {data.type !== 'gradient' && (
         <Field label="Thumbnail URL (optional)">
-          <input className="form-input" value={data.thumbnail ?? ''} onChange={(e) => onChange('thumbnail', e.target.value)} placeholder="https://… (leave blank for auto)" />
+          <input className="form-input" value={data.thumbnail ?? ''} onChange={(e) => onChange('thumbnail', e.target.value)} placeholder="Leave blank for auto" />
         </Field>
       )}
-      <Field label="Wide card (spans 2 columns)">
+      <Field label="Wide card (spans 2 cols)">
         <select className="form-input" value={data.wide ? 'yes' : 'no'} onChange={(e) => onChange('wide', e.target.value === 'yes')} style={{ appearance: 'none' }}>
           <option value="no">No</option>
           <option value="yes">Yes</option>
