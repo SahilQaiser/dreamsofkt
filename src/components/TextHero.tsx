@@ -1,4 +1,4 @@
-export default function TextHero() {
+export default function TextHero({ label = 'Aerial Cinematography' }: { label?: string }) {
   return (
     <section
       style={{
@@ -9,7 +9,7 @@ export default function TextHero() {
     >
       <div className="container">
         <span className="eyebrow" style={{ marginBottom: '24px', display: 'flex' }}>
-          Aerial Cinematography
+          {label}
         </span>
         <h1
           style={{

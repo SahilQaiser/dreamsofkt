@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 const links = ['Work', 'About', 'Services', 'Contact']
 
-export default function Navbar() {
+export default function Navbar({ wordmark = 'Dreams of' }: { wordmark?: string }) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function Navbar() {
               letterSpacing: '0.01em',
             }}
           >
-            Dreams of
+            {wordmark}
           </span>
           <span
             style={{

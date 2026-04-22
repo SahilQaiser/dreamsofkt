@@ -8,12 +8,15 @@ import About from '@/components/About'
 import Services from '@/components/Services'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
+import { VARIANT_CONFIG } from '@/lib/variantConfig'
 import type { SiteContent } from '@/types/content'
+
+const cfg = VARIANT_CONFIG.dreams
 
 export default function DreamsLayout({ content }: { content: SiteContent }) {
   return (
     <>
-      <Navbar />
+      <Navbar wordmark={cfg.wordmark} />
       <VideoHero hero={content.hero} />
       <ReelStrip videos={content.videos} />
       <FeaturedReel reel={content.featuredReel} />
@@ -22,7 +25,7 @@ export default function DreamsLayout({ content }: { content: SiteContent }) {
       <About />
       <Services />
       <Contact />
-      <Footer />
+      <Footer wordmark={cfg.wordmark} />
     </>
   )
 }

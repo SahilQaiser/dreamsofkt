@@ -1,16 +1,19 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { getVariant } from '@/lib/variant'
+import { VARIANT_CONFIG } from '@/lib/variantConfig'
 
-export const metadata: Metadata = {
-  title: 'Dreams of KT — Aerial Cinematography & Drone Videography',
-  description:
-    'The world from above. KT captures landscapes, cityscapes, and stories through the lens of a drone.',
-  openGraph: {
-    title: 'Dreams of KT — Aerial Cinematography',
-    description: 'The world from above.',
-    type: 'website',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const cfg = VARIANT_CONFIG[await getVariant()]
+  return {
+    title: cfg.title,
+    description: cfg.description,
+    openGraph: {
+      title: cfg.title,
+      description: cfg.description,
+      type: 'website',
+    },
+  }
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

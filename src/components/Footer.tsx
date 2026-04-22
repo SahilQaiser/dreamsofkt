@@ -6,7 +6,7 @@ const SOCIAL = [
   { label: 'LinkedIn', href: '#' },
 ]
 
-export default function Footer() {
+export default function Footer({ wordmark = 'Dreams of' }: { wordmark?: string }) {
   return (
     <footer
       style={{
@@ -49,7 +49,7 @@ export default function Footer() {
                   letterSpacing: '0.01em',
                 }}
               >
-                Dreams of
+                {wordmark}
               </span>
               <span
                 style={{
@@ -156,7 +156,7 @@ export default function Footer() {
               letterSpacing: '0.04em',
             }}
           >
-            © {new Date().getFullYear()} Dreams of KT. All rights reserved.
+            © {new Date().getFullYear()} {wordmark} KT. All rights reserved.
           </p>
           <div style={{ display: 'flex', gap: '24px' }}>
             {['Privacy policy', 'Terms of use'].map((t) => (
